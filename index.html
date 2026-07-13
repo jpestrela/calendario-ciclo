@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendário de Ciclo Inteligente</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Plus Jakarta Sans) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Alpine.js for lightweight reactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #fdf8f7;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #fdf8f7;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #f1d5d2;
+            border-radius: 10px;
+        }
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="text-gray-800 antialiased min-h-screen">
+
+    <div x-data="cycleApp()" x-init="initApp()" class="max-w-7xl mx-auto px-4 py-8">
+        
+        <!-- HEADER -->
+        <header class="text-center mb-10">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-600 border border-rose-100 mb-3">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> seu ciclo, com privacidade e inteligência
+            </span>
+            <h1 class="text-4xl font-bold text-gray-900 tracking-tight mb-2">Calendário de Ciclo</h1>
+            <p class="text-gray-500 max-w-md mx-auto text-sm">
+                Previsões automáticas salvas localmente no seu aparelho com controle total dos seus dados.
+            </p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- ESQUERDA: CONFIGURAÇÕES, BACKUP E SUGESTÃO DO DIA -->
+            <div class="lg:col-span-4 space-y-6">
+                
+                <!-- PAINEL DE AJUSTES -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-rose-100/60">
+                    <div class="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
+                        <div class="p-2 bg-rose-50 rounded-xl text-rose-500">
+                            <i data-lucide="settings" class="w-5 h-5"></i>
+                        </div>
+                        <h2 class="font-bold text-gray-800 text-lg">Configurar Meu Ciclo</h2>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Última Menstruação</label>
+                            <input type="date" x-model="lastPeriod" @change="saveSettings()"
+                                class="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-400 text-sm transition-all">
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Duração Ciclo (Dias)</label>
+                                <input type="number" x-model.number="cycleLength" @input="saveSettings()" min="20" max="45"
+                                    class="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-400 text-sm transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Dias de Fluxo</label>
+                                <input type="number" x-model.number="periodLength" @input="saveSettings()" min="2" max="10"
+                                    class="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-400 text-sm transition-all">
+                            </div>
+                        </div>
+
+                        <div class="pt-2 flex items-center justify-between text-xs text-emerald-600 font-medium bg-emerald-50/60 px-3 py-2 rounded-xl border border-emerald-100/50">
+                            <span class="flex items-center gap-1"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Salvo automaticamente</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PAINEL DE BACKUP (PORTABILIDADE DOS DADOS) -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-rose-100/60">
+                    <div class="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                        <div class="p-2 bg-rose-50 rounded-xl text-rose-500">
+                            <i data-lucide="database" class="w-5 h-5"></i>
+                        </div>
+                        <h2 class="font-bold text-gray-800 text-base">Nuvem & Portabilidade</h2>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4 leading-relaxed">
+                        Seus dados ficam 100% trancados no navegador deste aparelho por privacidade. Para mudar de celular ou criar uma cópia de segurança, use as ferramentas abaixo:
+                    </p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button @click="exportData()" class="flex items-center justify-center gap-1 px-3 py-2 text-xs font-semibold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-100 rounded-xl transition-all">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i> Exportar
+                        </button>
+                        
+                        <label class="flex items-center justify-center gap-1 px-3 py-2 text-xs font-semibold bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 rounded-xl cursor-pointer transition-all">
+                            <i data-lucide="upload" class="w-3.5 h-3.5"></i> Importar
+                            <input type="file" @change="importData($event)" accept=".json" class="hidden">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- PAINEL DE HOJE / RECOMENDAÇÃO INTELIGENTE -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-rose-100/60 relative overflow-hidden">
+                    <div class="absolute -right-6 -top-6 w-24 h-24 bg-rose-50 rounded-full opacity-50 blur-xl"></div>
+                    
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <span class="text-xs font-medium text-gray-400 uppercase tracking-wider block">Resumo de Hoje</span>
+                            <h3 class="text-xl font-bold text-gray-900" x-text="formatFullDate(today)"></h3>
+                        </div>
+                    </div>
+
+                    <!-- Badge da Fase Atual -->
+                    <div class="mb-3">
+                        <template x-if="getPhase(today) === 'menstruation'">
+                            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                                🩸 Menstruação (Fase Folicular Inicial)
+                            </span>
+                        </template>
+                        <template x-if="getPhase(today) === 'follicular'">
+                            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                ✨ Fase Folicular (Energia Alta)
+                            </span>
+                        </template>
+                        <template x-if="getPhase(today) === 'fertile'">
+                            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-violet-100 text-violet-700">
+                                🔥 Janela Fértil / Ovulação
+                            </span>
+                        </template>
+                        <template x-if="getPhase(today) === 'tpm'">
+                            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                                🧘‍♀️ Fase Lútea / TPM
+                            </span>
+                        </template>
+                    </div>
+
+                    <!-- NOVO: Indicador de Probabilidade de Gravidez hoje -->
+                    <div class="mb-4 flex items-center gap-2 border-t border-gray-50 pt-3">
+                        <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Gravidez Hoje:</span>
+                        <template x-if="getPregnancyProbability(today) === 'Alta'">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700 border border-rose-200">
+                                🔴 Alta Probabilidade
+                            </span>
+                        </template>
+                        <template x-if="getPregnancyProbability(today) === 'Média'">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">
+                                🟡 Média Probabilidade
+                            </span>
+                        </template>
+                        <template x-if="getPregnancyProbability(today) === 'Baixa'">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                🟢 Baixa Probabilidade
+                            </span>
+                        </template>
+                    </div>
+
+                    <!-- Caixa de Dica Customizada Baseada no Humor/Ciclo -->
+                    <div class="p-4 rounded-xl border transition-all"
+                         :class="{
+                            'bg-rose-50/70 border-rose-100': getPhase(today) === 'menstruation',
+                            'bg-emerald-50/70 border-emerald-100': getPhase(today) === 'follicular',
+                            'bg-violet-50/70 border-violet-100': getPhase(today) === 'fertile',
+                            'bg-amber-50/70 border-amber-100': getPhase(today) === 'tpm'
+                         }">
+                        <h4 class="text-xs font-bold uppercase tracking-wider mb-1"
+                            :class="{
+                                'text-rose-800': getPhase(today) === 'menstruation',
+                                'text-emerald-800': getPhase(today) === 'follicular',
+                                'text-violet-800': getPhase(today) === 'fertile',
+                                'text-amber-800': getPhase(today) === 'tpm'
+                            }">Sugestão ideal para hoje:</h4>
+                        <p class="text-sm font-medium leading-relaxed" 
+                           :class="{
+                                'text-rose-900': getPhase(today) === 'menstruation',
+                                'text-emerald-900': getPhase(today) === 'follicular',
+                                'text-violet-900': getPhase(today) === 'fertile',
+                                'text-amber-900': getPhase(today) === 'tpm'
+                           }" x-text="getSuggestion(getPhase(today))"></p>
+                    </div>
+                    
+                    <!-- NOVO: Dica Baseada no Dia da Semana -->
+                    <div class="mt-3 p-3 rounded-xl border border-gray-100 bg-gray-50/70">
+                        <h4 class="text-[11px] font-bold uppercase tracking-wider mb-1 text-gray-500 flex items-center gap-1">
+                            <i data-lucide="calendar-days" class="w-3 h-3"></i> Dica pelo dia da semana:
+                        </h4>
+                        <p class="text-xs text-gray-700 leading-relaxed" x-text="getWeekdaySuggestion(today, getPhase(today))"></p>
+                    </div>
+
+                    <!-- NOVO: Dica Baseada no Clima do Dia -->
+                    <div class="mt-3 p-3 rounded-xl border border-sky-100 bg-sky-50/60">
+                        <div class="flex items-center justify-between mb-1">
+                            <h4 class="text-[11px] font-bold uppercase tracking-wider text-sky-700 flex items-center gap-1">
+                                <i data-lucide="thermometer" class="w-3 h-3"></i> Dica pelo clima de hoje:
+                            </h4>
+                            <span class="text-xs font-bold text-sky-700" x-show="weather.temp !== null" x-text="Math.round(weather.temp) + '°C'"></span>
+                        </div>
+
+                        <template x-if="weather.temp === null && !weather.loading">
+                            <button @click="fetchWeather()" class="text-xs font-semibold text-sky-600 hover:text-sky-800 underline underline-offset-2">
+                                Ativar previsão do tempo pra hoje
+                            </button>
+                        </template>
+                        <template x-if="weather.loading">
+                            <p class="text-xs text-sky-600">Buscando o clima da sua região...</p>
+                        </template>
+                        <template x-if="weather.error && !weather.loading">
+                            <p class="text-xs text-rose-500" x-text="weather.error"></p>
+                        </template>
+                        <template x-if="weather.temp !== null">
+                            <p class="text-xs text-sky-900 leading-relaxed" x-text="getWeatherSuggestion(getPhase(today))"></p>
+                        </template>
+                    </div>
+
+                    <!-- Sintomas Registrados Hoje -->
+                    <div class="mt-4 pt-3 border-t border-gray-100" x-show="getLog(today)">
+                        <span class="text-xs text-gray-400 font-semibold uppercase block mb-1">Seus Marcadores:</span>
+                        <div class="flex flex-wrap gap-1">
+                            <template x-for="mood in getLog(today)?.moods || []">
+                                <span class="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded-md" x-text="mood"></span>
+                            </template>
+                        </div>
+                        <p class="text-xs italic text-gray-600 mt-1" x-text="'"' + getLog(today)?.note + '"'" x-show="getLog(today)?.note"></p>
+                    </div>
+                </div>
+
+                <!-- LEGENDA DOS MARCADORES -->
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-rose-100/60">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Legenda de Fases</h3>
+                    <div class="space-y-2 text-xs font-medium">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-rose-400"></span>
+                            <span class="text-gray-600">Menstruação</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                            <span class="text-gray-600">Fase Folicular (Estabilidade emocional)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-violet-400"></span>
+                            <span class="text-gray-600">Período Fértil (Energia & Atração)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-amber-400"></span>
+                            <span class="text-gray-600">TPM / Fase Lútea (Introspecção)</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- DIREITA: CALENDÁRIO COMPLETO AUTOMÁTICO -->
+            <div class="lg:col-span-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <i data-lucide="calendar" class="w-6 h-6 text-rose-400"></i> Vista Anual de Previsão
+                    </h2>
+                    <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700">
+                        <button @click="changeYear(-1)" class="hover:text-rose-500 transition-colors"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                        <span x-text="year"></span>
+                        <button @click="changeYear(1)" class="hover:text-rose-500 transition-colors"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+
+                <!-- GRID DE MESES -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <template x-for="(monthName, monthIndex) in monthNames">
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-rose-50/10">
+                            <h3 class="font-bold text-gray-800 text-base mb-3 capitalize text-center border-b border-gray-50 pb-1.5" x-text="monthName"></h3>
+                            
+                            <!-- Dias da semana -->
+                            <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                                <div>D</div><div>S</div><div>T</div><div>Q</div><div>Q</div><div>S</div><div>S</div>
+                            </div>
+                            
+                            <!-- Dias do mês -->
+                            <div class="grid grid-cols-7 gap-1 text-center">
+                                <template x-for="blank in getBlankDays(monthIndex)">
+                                    <div class="h-10"></div>
+                                </template>
+                                
+                                <template x-for="day in getDaysInMonth(monthIndex)">
+                                    <button 
+                                        @click="openModal(monthIndex, day)"
+                                        :class="getDayClass(monthIndex, day)"
+                                        class="h-10 text-xs rounded-lg flex flex-col items-center justify-center relative font-medium group transition-all hover:scale-105"
+                                        :title="getPhaseLabel(monthIndex, day)">
+                                        <span x-text="day"></span>
+                                        
+                                        <!-- Container dos novos indicadores de rodapé dos dias -->
+                                        <div class="flex items-center justify-center gap-0.5 absolute bottom-0.5">
+                                            <!-- Coração de Relação Sexual -->
+                                            <template x-if="hasIntercourse(monthIndex, day)">
+                                                <span class="text-[8px] leading-none text-rose-500 font-bold">❤️</span>
+                                            </template>
+                                            <!-- Bolinha de Sintoma/Nota -->
+                                            <template x-if="hasLog(monthIndex, day)">
+                                                <span class="w-1 h-1 bg-gray-600 rounded-full"></span>
+                                            </template>
+                                        </div>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- MODAL DE ANOTAÇÕES / MARCADORES DE SINTOMAS -->
+        <div x-show="modalOpen" x-transition class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" x-cloak>
+            <div @click.away="modalOpen = false" class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-gray-100 overflow-hidden transform transition-all">
+                
+                <div class="p-5 border-b border-gray-100 bg-rose-50/40">
+                    <div class="flex justify-between items-center mb-1">
+                        <div>
+                            <span class="text-xs font-semibold text-rose-500 uppercase block">Configurar Dia</span>
+                            <h3 class="text-lg font-bold text-gray-900" x-text="formatFullDate(activeDate)"></h3>
+                        </div>
+                        <button @click="modalOpen = false" class="p-1 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
+                            <i data-lucide="x" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <!-- NOVO: Linha de Status do Dia Selecionado no Modal -->
+                    <div class="flex flex-wrap gap-1.5 items-center mt-2 text-[10px]">
+                        <!-- Fase -->
+                        <template x-if="activeDate && getPhase(activeDate) === 'menstruation'">
+                            <span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-semibold">🩸 Menstruação</span>
+                        </template>
+                        <template x-if="activeDate && getPhase(activeDate) === 'follicular'">
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">✨ Fase Folicular</span>
+                        </template>
+                        <template x-if="activeDate && getPhase(activeDate) === 'fertile'">
+                            <span class="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-semibold">🔥 Período Fértil</span>
+                        </template>
+                        <template x-if="activeDate && getPhase(activeDate) === 'tpm'">
+                            <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">🧘‍♀️ Lútea / TPM</span>
+                        </template>
+
+                        <!-- Probabilidade -->
+                        <template x-if="activeDate && getPregnancyProbability(activeDate) === 'Alta'">
+                            <span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-100 font-bold">🔴 Gravidez: Alta</span>
+                        </template>
+                        <template x-if="activeDate && getPregnancyProbability(activeDate) === 'Média'">
+                            <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 font-bold">🟡 Gravidez: Média</span>
+                        </template>
+                        <template x-if="activeDate && getPregnancyProbability(activeDate) === 'Baixa'">
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 font-bold">🟢 Gravidez: Baixa</span>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="p-5 space-y-4">
+                    <!-- NOVO: Seção para Relação Sexual -->
+                    <div class="flex items-center justify-between p-3.5 bg-rose-50/40 rounded-xl border border-rose-100">
+                        <div class="flex items-center gap-2">
+                            <span class="p-1.5 bg-rose-100/60 rounded-lg text-rose-500">
+                                <i data-lucide="heart" class="w-4 h-4 text-rose-500"></i>
+                            </span>
+                            <div>
+                                <span class="text-xs font-bold text-gray-700 block">Relação Sexual</span>
+                                <span class="text-[10px] text-gray-400 font-medium">Registrar atividade sexual hoje</span>
+                            </div>
+                        </div>
+                        <button @click="activeIntercourse = !activeIntercourse" 
+                                :class="activeIntercourse ? 'bg-rose-500 text-white shadow-sm shadow-rose-200' : 'bg-gray-100 text-gray-400'"
+                                class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all"
+                                x-text="activeIntercourse ? 'Sim ❤️' : 'Não'">
+                        </button>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Como você se sente / Sintomas?</label>
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="item in moodOptions">
+                                <button 
+                                    @click="toggleMoodSelection(item)"
+                                    :class="activeMoods.includes(item) ? 'bg-rose-500 text-white border-rose-500' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'"
+                                    class="px-3 py-1.5 rounded-xl border text-xs font-medium transition-all"
+                                    x-text="item">
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Notas do dia</label>
+                        <textarea x-model="activeNote" rows="3" placeholder="Ex: Cólica leve, muita disposição hoje, dia super produtivo..."
+                            class="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-400 placeholder:text-gray-400 resize-none transition-all"></textarea>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
+                    <button @click="deleteLog()" class="px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition-all mr-auto" x-show="hasLogForActiveDate() || activeIntercourse">
+                        Excluir
+                    </button>
+                    <button @click="modalOpen = false" class="px-4 py-2 text-xs font-semibold text-gray-500 hover:bg-gray-100 rounded-xl transition-all">
+                        Cancelar
+                    </button>
+                    <button @click="saveLog()" class="px-5 py-2 text-xs font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl shadow-sm shadow-rose-200 transition-all">
+                        Salvar Ajustes
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function cycleApp() {
+            return {
+                lastPeriod: localStorage.getItem('cycle_lastPeriod') || '2026-07-01',
+                cycleLength: parseInt(localStorage.getItem('cycle_cycleLength')) || 28,
+                periodLength: parseInt(localStorage.getItem('cycle_periodLength')) || 5,
+                logs: JSON.parse(localStorage.getItem('cycle_logs')) || {},
+                
+                year: 2026,
+                today: new Date(),
+                
+                modalOpen: false,
+                activeDate: null,
+                activeMoods: [],
+                activeNote: '',
+                activeIntercourse: false, // NOVO: Controle de Relações
+
+                // NOVO: Estado do clima do dia (opt-in via geolocalização)
+                weather: { temp: null, loading: false, error: null },
+
+                moodOptions: ['🩸 Fluxo Intenso', '⚡ Cólica', '💆‍♀️ Dor de cabeça', '🔋 Super disposta', '🍰 Desejo por doces', '😴 Cansaço', '😡 Irritabilidade', '💖 Romântica / Libido Alta', '🧠 Foco Total'],
+                monthNames: ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'],
+                
+                initApp() {
+                    lucide.createIcons();
+                    this.$watch('modalOpen', () => { setTimeout(() => lucide.createIcons(), 50); });
+                    this.$watch('year', () => { setTimeout(() => lucide.createIcons(), 50); });
+
+                    // NOVO: Reaproveita o clima salvo se ainda estiver fresco (últimos 60 min)
+                    const cached = JSON.parse(localStorage.getItem('cycle_weather_cache') || 'null');
+                    if (cached && (Date.now() - cached.ts) < 60 * 60 * 1000) {
+                        this.weather.temp = cached.temp;
+                    }
+                },
+
+                saveSettings() {
+                    localStorage.setItem('cycle_lastPeriod', this.lastPeriod);
+                    localStorage.setItem('cycle_cycleLength', this.cycleLength);
+                    localStorage.setItem('cycle_periodLength', this.periodLength);
+                },
+
+                changeYear(amount) {
+                    this.year += amount;
+                },
+
+                // Lógica de portabilidade (Backup)
+                exportData() {
+                    const dataObj = {
+                        lastPeriod: this.lastPeriod,
+                        cycleLength: this.cycleLength,
+                        periodLength: this.periodLength,
+                        logs: this.logs
+                    };
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataObj));
+                    const downloadAnchor = document.createElement('a');
+                    downloadAnchor.setAttribute("href", dataStr);
+                    downloadAnchor.setAttribute("download", "backup_calendario_ciclo.json");
+                    document.body.appendChild(downloadAnchor);
+                    downloadAnchor.click();
+                    downloadAnchor.remove();
+                },
+
+                importData(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const imported = JSON.parse(e.target.result);
+                            if (imported.lastPeriod) this.lastPeriod = imported.lastPeriod;
+                            if (imported.cycleLength) this.cycleLength = imported.cycleLength;
+                            if (imported.periodLength) this.periodLength = imported.periodLength;
+                            if (imported.logs) this.logs = imported.logs;
+                            
+                            this.saveSettings();
+                            localStorage.setItem('cycle_logs', JSON.stringify(this.logs));
+                            alert('Backup carregado com sucesso! Seus dados foram restaurados.');
+                            window.location.reload();
+                        } catch (err) {
+                            alert('Erro ao ler o arquivo de backup. Verifique se escolheu o arquivo correto.');
+                        }
+                    };
+                    reader.readAsText(file);
+                },
+
+                getPhase(date) {
+                    if (!this.lastPeriod) return 'none';
+                    
+                    const start = new Date(this.lastPeriod + 'T00:00:00');
+                    const current = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                    
+                    const diffTime = current.getTime() - start.getTime();
+                    let diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    let dayOfCycle = ((diffDays % this.cycleLength) + this.cycleLength) % this.cycleLength + 1;
+                    
+                    if (dayOfCycle >= 1 && dayOfCycle <= this.periodLength) {
+                        return 'menstruation';
+                    } else if (dayOfCycle > this.periodLength && dayOfCycle <= (this.cycleLength - 17)) {
+                        return 'follicular';
+                    } else if (dayOfCycle > (this.cycleLength - 17) && dayOfCycle <= (this.cycleLength - 12)) {
+                        return 'fertile';
+                    } else {
+                        return 'tpm';
+                    }
+                },
+
+                // NOVO: Cálculo Dinâmico da Probabilidade de Gravidez
+                getPregnancyProbability(date) {
+                    if (!this.lastPeriod) return 'Baixa';
+                    
+                    const start = new Date(this.lastPeriod + 'T00:00:00');
+                    const current = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                    
+                    const diffTime = current.getTime() - start.getTime();
+                    let diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    let dayOfCycle = ((diffDays % this.cycleLength) + this.cycleLength) % this.cycleLength + 1;
+                    
+                    // Janela fértil principal (Altamente provável)
+                    if (dayOfCycle > (this.cycleLength - 17) && dayOfCycle <= (this.cycleLength - 12)) {
+                        return 'Alta';
+                    } 
+                    // Dias de margem de segurança ao redor do período fértil
+                    else if (dayOfCycle === (this.cycleLength - 18) || dayOfCycle === (this.cycleLength - 17) || dayOfCycle === (this.cycleLength - 11)) {
+                        return 'Média';
+                    } 
+                    else {
+                        return 'Baixa';
+                    }
+                },
+
+                getSuggestion(phase) {
+                    switch (phase) {
+                        case 'menstruation':
+                            return "🍿 Dia perfeito para pedir um delivery gostoso, assistir seu filme favorito debaixo das cobertas e descansar bastante. Respeite a redução de energia do seu corpo!";
+                        case 'follicular':
+                            return "🍹 Sua estabilidade e disposição física estão no ápice! Hoje seria um excelente dia para tomar um drink com as amigas, programar saídas sociais ou tirar projetos criativos do papel.";
+                        case 'fertile':
+                            return "🔥 Você está radiante, confiante e extremamente comunicativa. O melhor momento do mês para marcar um date, sair para dançar no final de semana ou apostar naquele look poderoso.";
+                        case 'tpm':
+                            return "🧘‍♀️ Momento ideal para desacelerar e voltar a atenção para si mesma. Um ótimo dia para fazer uma noite de skincare, tomar um chá quente relaxante, ler um bom livro ou ver uma série leve.";
+                        default:
+                            return "Aproveite o seu dia com carinho e equilíbrio!";
+                    }
+                },
+
+                // NOVO: Sugestão combinando a fase do ciclo com o dia da semana
+                getWeekdaySuggestion(date, phase) {
+                    const day = date.getDay(); // 0 = domingo ... 6 = sábado
+                    let category;
+                    if (day === 5 || day === 6) category = 'weekendNight'; // sexta e sábado
+                    else if (day === 0) category = 'sunday';
+                    else category = 'weekday'; // segunda a quinta
+
+                    const map = {
+                        weekendNight: {
+                            menstruation: "Fim de semana chegando, mas hoje o corpo pede repouso: aproveite pra descansar em casa, sem cobranças, e deixe a social pra próxima.",
+                            follicular: "Sextou! Sua energia está em alta — ótimo dia pra sair com as amigas, tomar um drink ou curtir a night.",
+                            fertile: "Sexta ou sábado com você no auge da confiança e da atração — o momento perfeito pra marcar aquele date especial ou curtir uma festa.",
+                            tpm: "Fim de semana, mas hoje vale mais um programa tranquilo: um filme em casa ou um jantar mais intimista, sem agito."
+                        },
+                        sunday: {
+                            menstruation: "Domingo de descanso total: aproveite pra ficar de pijama, se hidratar bem e recarregar as energias pra semana.",
+                            follicular: "Domingo com disposição extra — bom dia pra uma caminhada ao ar livre, um brunch ou organizar a semana.",
+                            fertile: "Domingo e você está radiante — aproveite pra um passeio a dois ou uma tarde especial com quem você gosta.",
+                            tpm: "Domingo pede introspecção: que tal um dia de skincare, leitura e silêncio antes da semana começar?"
+                        },
+                        weekday: {
+                            menstruation: "No meio da semana, priorize tarefas mais leves hoje e não se cobre tanto — o corpo está economizando energia.",
+                            follicular: "Ótimo dia de semana pra colocar ideias novas em prática, ter reuniões importantes ou resolver pendências — sua clareza mental está ótima.",
+                            fertile: "No meio da semana, aproveite sua comunicação afiada pra aquela conversa importante ou apresentação — você está mais persuasiva que o normal.",
+                            tpm: "No meio da semana, respeite seu limite: organize o dia com pausas e evite compromissos que exigem muita paciência."
+                        }
+                    };
+                    return map[category][phase] || '';
+                },
+
+                // NOVO: Busca o clima atual (opt-in, via geolocalização + Open-Meteo, sem chave de API)
+                fetchWeather() {
+                    this.weather.loading = true;
+                    this.weather.error = null;
+
+                    if (!navigator.geolocation) {
+                        this.weather.error = 'Seu navegador não suporta geolocalização.';
+                        this.weather.loading = false;
+                        return;
+                    }
+
+                    navigator.geolocation.getCurrentPosition(async (pos) => {
+                        try {
+                            const { latitude, longitude } = pos.coords;
+                            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+                            const data = await res.json();
+                            this.weather.temp = data.current_weather.temperature;
+                            localStorage.setItem('cycle_weather_cache', JSON.stringify({ temp: this.weather.temp, ts: Date.now() }));
+                        } catch (err) {
+                            this.weather.error = 'Não foi possível buscar o clima agora. Tente novamente.';
+                        } finally {
+                            this.weather.loading = false;
+                        }
+                    }, () => {
+                        this.weather.error = 'Permissão de localização negada.';
+                        this.weather.loading = false;
+                    }, { timeout: 8000 });
+                },
+
+                // NOVO: Classifica a temperatura atual em frio / ameno / calor
+                getWeatherCategory() {
+                    if (this.weather.temp === null) return null;
+                    if (this.weather.temp >= 27) return 'calor';
+                    if (this.weather.temp <= 17) return 'frio';
+                    return 'ameno';
+                },
+
+                // NOVO: Sugestão combinando a fase do ciclo com a temperatura atual
+                getWeatherSuggestion(phase) {
+                    const category = this.getWeatherCategory();
+                    if (!category) return '';
+
+                    const map = {
+                        calor: {
+                            menstruation: "☀️ Com esse calor, prefira roupas leves e beba bastante água — ajuda a aliviar o inchaço e a cólica.",
+                            follicular: "☀️ Dia quente com energia em alta — ótima combinação pra uma praia, piscina ou happy hour ao ar livre.",
+                            fertile: "☀️ Calor e confiança no auge: aposte em um look leve e refrescante pro seu encontro de hoje.",
+                            tpm: "☀️ Com esse calor, escolha um ambiente fresquinho pra relaxar — evita deixar a irritação ainda mais em alta."
+                        },
+                        frio: {
+                            menstruation: "❄️ Dia frio pede bolsa de água quente, cobertor e um chá — o combo perfeito pra cólica.",
+                            follicular: "❄️ Com esse frio, um café ou chocolate quente com as amigas pode ser tão bom quanto uma saída mais agitada.",
+                            fertile: "❄️ Frio lá fora, calor na conexão — ótimo clima pra um encontro aconchegante, tipo jantar ou filme agarradinhos.",
+                            tpm: "❄️ Dia frio combina com o momento: fique em casa, aposte em um casaco confortável e um chá relaxante."
+                        },
+                        ameno: {
+                            menstruation: "🌤️ Clima ameno hoje — ideal pra descansar em casa com uma roupa confortável e sem pressa.",
+                            follicular: "🌤️ Temperatura agradável pra aproveitar o dia lá fora, sem excessos de calor ou frio.",
+                            fertile: "🌤️ Clima perfeito pra um passeio ao ar livre ou date, sem preocupação com o tempo.",
+                            tpm: "🌤️ Dia ameno — bom momento pra uma caminhada leve ou um tempo sozinha, no seu ritmo."
+                        }
+                    };
+                    return map[category][phase] || '';
+                },
+
+                getPhaseLabel(monthIndex, day) {
+                    const date = new Date(this.year, monthIndex, day);
+                    const phase = this.getPhase(date);
+                    const labelMap = {
+                        'menstruation': 'Menstruação',
+                        'follicular': 'Fase Folicular (Estável)',
+                        'fertile': 'Período Fértil',
+                        'tpm': 'TPM / Fase Lútea'
+                    };
+                    return labelMap[phase] || '';
+                },
+
+                getDayClass(monthIndex, day) {
+                    const date = new Date(this.year, monthIndex, day);
+                    const phase = this.getPhase(date);
+                    const isToday = this.today.getDate() === day && this.today.getMonth() === monthIndex && this.today.getFullYear() === this.year;
+                    
+                    let base = "";
+                    if (isToday) {
+                        base += " ring-2 ring-gray-900 ring-offset-1 z-10 font-bold ";
+                    }
+
+                    if (phase === 'menstruation') {
+                        return base + " bg-rose-100 text-rose-700 hover:bg-rose-200";
+                    } else if (phase === 'follicular') {
+                        return base + " bg-green-500 text-white hover:bg-green-600";
+                    } else if (phase === 'fertile') {
+                        return base + " bg-violet-100 text-violet-700 hover:bg-violet-200";
+                    } else if (phase === 'tpm') {
+                        return base + " bg-amber-100 text-amber-700 hover:bg-amber-200";
+                    }
+                    return base + " text-gray-700 hover:bg-gray-100";
+                },
+
+                getDaysInMonth(monthIndex) {
+                    return new Date(this.year, monthIndex + 1, 0).getDate();
+                },
+
+                getBlankDays(monthIndex) {
+                    const firstDay = new Date(this.year, monthIndex, 1).getDay();
+                    return Array.from({ length: firstDay });
+                },
+
+                formatFullDate(date) {
+                    if (!date) return '';
+                    return new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
+                },
+
+                getDateKey(date) {
+                    if (!date) return '';
+                    const y = date.getFullYear();
+                    const m = String(date.getMonth() + 1).padStart(2, '0');
+                    const d = String(date.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${d}`;
+                },
+
+                // NOVO: Valida se o dia tem sintomas ou notas registrados (exclui relação)
+                hasLog(monthIndex, day) {
+                    const dateKey = this.getDateKey(new Date(this.year, monthIndex, day));
+                    const log = this.logs[dateKey];
+                    if (!log) return false;
+                    return (log.moods && log.moods.length > 0) || (log.note && log.note.trim() !== '');
+                },
+
+                // NOVO: Valida se o dia possui relações marcadas
+                hasIntercourse(monthIndex, day) {
+                    const dateKey = this.getDateKey(new Date(this.year, monthIndex, day));
+                    return this.logs[dateKey] && !!this.logs[dateKey].intercourse;
+                },
+
+                hasLogForActiveDate() {
+                    return this.activeDate && !!this.logs[this.getDateKey(this.activeDate)];
+                },
+
+                getLog(date) {
+                    return this.logs[this.getDateKey(date)] || null;
+                },
+
+                openModal(monthIndex, day) {
+                    this.activeDate = new Date(this.year, monthIndex, day);
+                    const currentLog = this.getLog(this.activeDate);
+                    
+                    if (currentLog) {
+                        this.activeMoods = [...(currentLog.moods || [])];
+                        this.activeNote = currentLog.note || '';
+                        this.activeIntercourse = !!currentLog.intercourse; // NOVO: Restaura estado da relação
+                    } else {
+                        this.activeMoods = [];
+                        this.activeNote = '';
+                        this.activeIntercourse = false; // NOVO: Reinicia estado
+                    }
+                    this.modalOpen = true;
+                },
+
+                toggleMoodSelection(mood) {
+                    if (this.activeMoods.includes(mood)) {
+                        this.activeMoods = this.activeMoods.filter(item => item !== mood);
+                    } else {
+                        this.activeMoods.push(mood);
+                    }
+                },
+
+                saveLog() {
+                    const key = this.getDateKey(this.activeDate);
+                    // Se não tiver anotações, nem sentimentos e nem relação sexual, exclui a chave
+                    if (this.activeMoods.length === 0 && this.activeNote.trim() === '' && !this.activeIntercourse) {
+                        delete this.logs[key];
+                    } else {
+                        this.logs[key] = {
+                            moods: this.activeMoods,
+                            note: this.activeNote,
+                            intercourse: this.activeIntercourse // NOVO: Salva estado da relação
+                        };
+                    }
+                    localStorage.setItem('cycle_logs', JSON.stringify(this.logs));
+                    this.modalOpen = false;
+                },
+
+                deleteLog() {
+                    const key = this.getDateKey(this.activeDate);
+                    delete this.logs[key];
+                    localStorage.setItem('cycle_logs', JSON.stringify(this.logs));
+                    this.modalOpen = false;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
